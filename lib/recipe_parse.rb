@@ -1,16 +1,27 @@
 module RecipeParse
+  # Used to parse ingredients from third party URLs
 
   require 'nokogiri'
   require 'open-uri'  
 
   class RecipeParser
 
+    def recipeParsedRaw
+      unless @doc.present?
+        Rails.logger.info "RecipeParser.recipeRawAsText: document not initialized"
+        return nil
+      end
+
+      return {name: findName, url: @url, thumbnailImageUrl: findThumbnailImageURL, ingredients: findIngredients, directions: findDirections}
+    end
+
     # initailizes html file for importing
     # returns true if successful
     # returns false if unsuccessful
     def loadHTMLFromURL(url)
       begin 
-        @doc = Nokogiri::HTML(open(url))    
+        @doc = Nokogiri::HTML(open(url))
+        @url = url   
       rescue
         Rails.logger.info "RecipeParser.loadURL: unable to load URL #{url}"
         return false
@@ -218,8 +229,6 @@ module RecipeParse
       return parsedList
     end
 
-
-
-  end
+  end # RecipeParser class
 
 end

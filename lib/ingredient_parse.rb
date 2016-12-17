@@ -1,136 +1,183 @@
 module IngredientParse
 
-  require 'nokogiri'
-  require 'open-uri'
-
   class IngredientParser
-    
-    attr_accessor :urlsParsed, :urlsToBeParsed, :doc
 
-    def initialize
-      @currentUrl = nil
-      @doc = nil
-      @urlsParsed = []
-      @urlsToBeParsed = []
-
-      @ingredientsParsedLogFilePath = 'db/seed/base_ingredients_seed_data.xml'
-      loadIngredientsParsedLogFile
+    def initialize(ingredientStringRaw)
+      @ingredientStringRaw = ingredientStringRaw
+      @ingredientStringCleaned = cleanedIngredientStringFrom(ingredientStringRaw)
+      @ingredientName = nil
+      @ingredientAmountUnit = nil
+      @ingredientAmountUnitAlias = nil
+      @ingredientAmount = nil
     end
 
-    ## Parsing HTML ## 
+    #TODO make these private
 
-    def loadHTMLFromURL(url)
-      unless @urlsParsed.include?(url)
-        begin 
-          @doc = Nokogiri::HTML(open(url))
-          @currentUrl = url          
-        rescue
-          Rails.logger.info "IngredientParser.loadURL: unable to load URL #{url}"
-          return false
-        end
-        Rails.logger.info "IngredientParser.loadURL: loaded URL #{url}"
-        return true
-      else
-        Rails.logger.info "IngredientParser.loadURL: already parsed URL #{url}"
-        return false
-      end
-    end
-
-    def loadHTMLFromFile(filePath)
-      begin 
-        @doc = File.open(filePath) { |f| Nokogiri::HTML(f) } 
-      rescue
-        Rails.logger.info "RecipeParser.loadURL: unable to load HTML file #{filePath}"
-        return false
-      end
-      Rails.logger.info "RecipeParser.loadURL: successfully loaded HTML file #{filePath}"
-      return true
-    end
-
-    def findOtherBettyCrockerRecipesLinkedOnPage
-      otherRecipes = []
-      @doc.css('a[href]').each do |urlNode|
-        relativeURL = urlNode['href']
-        if isBettyCrockerRecipeURL(relativeURL)
-          absoluteURL = "http://www.bettycrocker.com" + relativeURL
-          otherRecipes.append(absoluteURL)
-        end
-      end
-      @urlsToBeParsed.concat(otherRecipes)
-      return otherRecipes
-    end
-
-    def findIngredientsOnPage
-      ingredientsList = []
-      @doc.search('dl.recipePartIngredient').each do |ingredientDefinitionList|
-        baseIngredientNameRaw = ingredientDefinitionList['data-base-ingredient']
-        baseIngredientNameCleaned = cleanString(baseIngredientNameRaw)
-        categoryRaw = ingredientDefinitionList['data-category']
-        categoryCleaned = cleanString(categoryRaw)
-        if baseIngredientNameCleaned != nil  and categoryCleaned != nil 
-          ingredientsList.append({name: baseIngredientNameCleaned, category: categoryCleaned})
-        end
-      end
-      return ingredientsList
-    end
-
-    def logIngredientsOnPage
-
-      if @currentUrl.present?        
-        if isBettyCrockerRecipeURL(@currentUrl)
-          findIngredientsOnPage.each do |ingredient|
-            ingredientNode = @ingredientsParsedLog.create_element('BaseIngredient')
-            nameNode = @ingredientsParsedLog.create_element('Name', ingredient[:name])
-            ingredientNode.add_child(nameNode)
-            categoryNode = @ingredientsParsedLog.create_element('Category', ingredient[:category])
-            ingredientNode.add_child(categoryNode)
-            if @ingredientsParsedLog.at("BaseIngredient Name:contains(\"#{ingredient[:name]}\")")
-              puts "Ingredient #{ingredient[:name]} already captured"
-            else
-              @ingredientsParsedLog.at('BaseIngredients').add_child(ingredientNode)
-              puts "Ingredient #{ingredient[:name]} added"
-            end
-          end
-        end      
-
-        @urlsParsed.append(@currentUrl) if isBettyCrockerRecipeURL(@currentUrl)
-        @urlsToBeParsed.delete(@currentUrl)
-
-        urlNode = @ingredientsParsedLog.create_element('URL', @currentUrl)
-        @ingredientsParsedLog.at('URLs').add_child(urlNode)
-        saveIngredientsParsedLogFile
+    def ingredientAmountUnitAlias
+      unless @ingredientAmountUnitAlias == nil
+        return @ingredientAmountUnitAlias
       end
       
+      @ingredientAmountUnitAlias = unitAliasInString(@ingredientStringCleaned)
+      return @ingredientAmountUnitAlias
     end
 
-    private
+    def ingredientAmountUnit
+      unless @ingredientAmountUnit == nil
+        return @ingredientAmountUnit
+      end
 
-    ## Parsing HTML ##
+      if ingredientAmountUnitAlias == nil
+        @ingredientAmountUnit = "count"
+        return "count"
+      end
 
-    def isBettyCrockerRecipeURL(url)
-      #/recipes/smothered-chicken-casserole/a68b963a-5f75-4ad4-be09-8e0004ee0d9e            
-      isAbsoluteURL = url.match(/^http:\/\/www.bettycrocker.com\/recipes\/\S+\/\S{8}-\S{4}-\S{4}-\S{4}-\S{12}/i).present?
-      isRelativeURL = url.match(/^\/recipes\/\S+\/\S{8}-\S{4}-\S{4}-\S{4}-\S{12}/i).present? 
-      return (isRelativeURL or isAbsoluteURL)
+      @ingredientAmountUnit = unitAliasedAs(ingredientAmountUnitAlias)
+      return @ingredientAmountUnit
     end
 
-    def cleanString(string)
-      return string.gsub(/\(.+\)/,"").gsub(/\/.+/,"").squish
+    def ingredientAmount
+      unless @ingredientAmount == nil
+        return @ingredientAmount
+      end
+
+      # TODO handle all patterns
+      # Possible Patterns:
+      # Vanilla: "3 cups"
+      # Fraction: "1 1/2 cups"
+      # Compound units: "3 lbs 2 ounces"
+      # Multipliers: "2 12oz cans" or "2x 12oz cans"
+      
+      amountString = ingredientStringSplit[:amountString]
+      
+      if amountString != nil
+        @ingredientAmount = amountRepresentedByString(amountString)
+      else
+        @ingredientAmount = 1
+      end
+      
+      return @ingredientAmount
     end
 
-    ## Ingredients Log ##
+    def ingredientName
+      unless @ingredientName == nil
+        return @ingredientName
+      end
 
-    def loadIngredientsParsedLogFile
-      xml = File.read(@ingredientsParsedLogFilePath)
-      @ingredientsParsedLog = Nokogiri::XML(xml,&:noblanks)
-      @ingredientsParsedLog.search('URLs').children.each do |url|
-        @urlsParsed.append url.content
+      @ingredientName = ingredientStringSplit[:nameString].squish
+      return @ingredientName
+    end
+
+    # TODO: Make these private
+    #private
+
+    def ingredientStringSplit
+      unless @ingredientStringSplit == nil
+        return @ingredientStringSplit 
+      end
+      
+      @ingredientStringSplit = {amountString: nil, nameString: nil}
+
+      if ingredientAmountUnitAlias != nil
+        ingredientSplitString = @ingredientStringCleaned.split(ingredientAmountUnitAlias)
+        @ingredientStringSplit = {amountString: ingredientSplitString[0], nameString: ingredientSplitString.last}
+      else
+        amountString = amountStringFrom(@ingredientStringCleaned)
+        if amountString != nil
+          nameString = @ingredientStringCleaned.gsub(amountString, "")
+        else
+          nameString = @ingredientStringCleaned
+        end        
+        @ingredientStringSplit = {amountString: amountString, nameString: nameString}
+      end
+
+      return @ingredientStringSplit
+    end
+
+    def unitAliasInString(string)
+      possibleUnitAliases = UNIT_ALIASES_POSSIBLE # defined in units.rb initializer
+      possibleUnitAliases.each do |aliasString|
+        if string.include?(aliasString + " ")
+          return aliasString
+        end
+      end
+      return nil
+    end
+
+    def unitAliasedAs(aliasString)
+      Unit.definitions.each do |unit|
+        if unit[1].aliases.include?(aliasString)
+          unit = unit[1].name.match(/\w+\s*-*\w+/)[0]
+          return unit
+        end
+      end
+      return nil
+    end
+
+    def amountStringFrom(string)
+      matchData = string.match(/(\d+[x]?\s+)*(\d+[\s|\W]?\d*\/?\d*)/i)
+      if matchData != nil 
+        return matchData[0]
+      else
+        return nil
       end
     end
 
-    def saveIngredientsParsedLogFile
-      File.write(@ingredientsParsedLogFilePath, @ingredientsParsedLog.to_xml(indent: 4, indent_text: " "))
+    def amountRepresentedByString(amountString)
+      matchData = amountString.match(/(\d+[x]?\s+)*(\d+[\s|\W]?\d*\/?\d*)/i)
+      unless matchData == nil
+        mulitplier = matchData[1]||1 rescue 1
+        amount = matchData[2]||1 rescue 1
+        totalAmountUnit = Unit.new(amount) * Unit.new(mulitplier)
+        totalAmount = totalAmountUnit.to_r
+        return totalAmount
+      end
+      return 1
     end
+
+    def cleanedIngredientStringFrom(rawString)
+      unless rawString != nil
+        return ""
+      end
+
+      cleanedIngredientString = replaceProblemCharacters(rawString) # convert vulgar fractions to readable fractions
+      cleanedIngredientString.gsub!(/\(.+\)/,"") # get rid of anything in parenthesis
+      return cleanedIngredientString
+    end
+
+    def replaceProblemCharacters(string)
+      replacedString = string
+      problemCharacters.each {|f| replacedString.gsub!(f[0], f[1])}
+      return replacedString.downcase
+    end
+
+    def problemCharacters 
+      return {
+        # Vulgar Fraction Characters
+        "\u00BC" => " 1/4",
+        "\u00BD" => " 1/2",
+        "\u00BE" => " 3/4",
+        "\u2150" => " 1/7",
+        "\u2151" => " 1/9",
+        "\u2152" => " 1/10",
+        "\u2153" => " 1/3",
+        "\u2154" => " 2/3",
+        "\u2155" => " 1/5",
+        "\u2156" => " 2/5",
+        "\u2157" => " 3/5",
+        "\u2158" => " 4/5",
+        "\u2159" => " 1/6",
+        "\u215A" => " 5/6",
+        "\u215B" => " 1/8",
+        "\u215C" => " 3/8",
+        "\u215D" => " 5/8",
+        "\u215E" => " 7/8",
+        # Other Problem Characters
+        "⁄" => "/", # weird pseudo slash
+      }
+    end
+
+
 
   end
 
