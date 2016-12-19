@@ -12,14 +12,18 @@
 
 ActiveRecord::Schema.define(version: 20161204134213) do
 
-  create_table "base_ingredients", force: :cascade do |t|
+  # These are extensions that must be enabled in order to support this database
+  enable_extension "plpgsql"
+  enable_extension "uuid-ossp"
+
+  create_table "base_ingredients", id: :uuid, default: -> { "uuid_generate_v4()" }, force: :cascade do |t|
     t.string   "name"
     t.string   "category"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
   end
 
-  create_table "ingredients", force: :cascade do |t|
+  create_table "ingredients", id: :uuid, default: -> { "uuid_generate_v4()" }, force: :cascade do |t|
     t.integer "recipe_id"
     t.integer "ingredient_id"
     t.decimal "amount"
@@ -27,7 +31,7 @@ ActiveRecord::Schema.define(version: 20161204134213) do
     t.string  "descriptionModifier"
   end
 
-  create_table "recipe_parses", force: :cascade do |t|
+  create_table "recipe_parses", id: :uuid, default: -> { "uuid_generate_v4()" }, force: :cascade do |t|
     t.string   "name"
     t.string   "url"
     t.string   "imageURL"
@@ -38,7 +42,7 @@ ActiveRecord::Schema.define(version: 20161204134213) do
     t.datetime "updated_at",  null: false
   end
 
-  create_table "recipes", force: :cascade do |t|
+  create_table "recipes", id: :uuid, default: -> { "uuid_generate_v4()" }, force: :cascade do |t|
     t.string   "name"
     t.string   "sourceURL"
     t.text     "instructions"

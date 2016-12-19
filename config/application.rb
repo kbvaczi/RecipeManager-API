@@ -29,5 +29,10 @@ module RecipeManagerApi
 
     config.autoload_paths += %W(#{config.root}/lib) # load files under the /lib directory
 
+    # automatically setup new table migrations to use UUID instead of integer for database table primary keys
+    config.generators do |g|
+      g.orm :active_record, primary_key_type: :uuid
+    end
+
   end
 end

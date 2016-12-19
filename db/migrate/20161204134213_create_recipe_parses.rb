@@ -1,6 +1,6 @@
 class CreateRecipeParses < ActiveRecord::Migration[5.0]
   def change
-    create_table :recipe_parses do |t|
+    create_table :recipe_parses, id: :uuid do |t|
 
       # table attributes
       t.string :name
