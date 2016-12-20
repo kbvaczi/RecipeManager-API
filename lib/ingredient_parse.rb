@@ -2,6 +2,8 @@ module IngredientParse
 
   class IngredientParser
 
+    # TODO: include site-speific css tags to search for (i.e. for allrecipes.com)
+
     def initialize(ingredientStringRaw)
       @ingredientStringRaw = ingredientStringRaw
       @ingredientStringCleaned = cleanedIngredientStringFrom(ingredientStringRaw)
@@ -68,8 +70,7 @@ module IngredientParse
       return @ingredientName
     end
 
-    # TODO: Make these private
-    #private
+    private
 
     def ingredientStringSplit
       unless @ingredientStringSplit == nil

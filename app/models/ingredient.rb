@@ -4,4 +4,11 @@ class Ingredient < ApplicationRecord
   belongs_to :base_ingredient, optional: true
 
   validates_presence_of :amount, :amountUnit
+
+  after_create :linkToBaseIngredient
+
+  def linkToBaseIngredient
+    # TODO: implement linking to base ingredient after ingredient creation
+    # TODO: Run this in a background task?
+  end
 end

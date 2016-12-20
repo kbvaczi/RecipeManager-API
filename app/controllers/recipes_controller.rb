@@ -1,18 +1,17 @@
 class RecipesController < ApplicationController
   
-  before_action :set_recipe, only: [:show, :edit, :update, :destroy]
+  before_action :set_recipe, only: [:show, :update, :destroy]
 
   # GET /recipes
   def index
-    @recipes = Recipe.all    
+    @recipes = Recipe.all
+    # TODO: Pagination?
+    render json @recipes, :status :ok
   end
 
   # GET /recipes/1
   def show
-  end
-
-  # GET /recipes/1/edit
-  def edit
+    render json: @recipe, :status :ok
   end
 
   # POST /recipes

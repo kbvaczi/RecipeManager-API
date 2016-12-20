@@ -17,6 +17,8 @@ class Recipes::ParsesController < ApplicationController
 
   def create    
 
+    # TODO: Run this in a background task?
+
     @recipe_parse = Recipes::Parse.new(recipe_parse_params)
 
     recipeParser = RecipeParser.new
