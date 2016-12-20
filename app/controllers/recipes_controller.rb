@@ -4,13 +4,7 @@ class RecipesController < ApplicationController
 
   # GET /recipes
   def index
-  
-    @recipes = Recipe.all
-
-    #url = "http://www.skinnytaste.com/dinas-tossed-mushrooms/" #params[:url]
-    url = "https://www.weightwatchers.com/us/recipe/classic-lasagna-1/5626a644f79cf9120df3b8e7"
-     render json: scrapeRecipeFromURL(url)
-    
+    @recipes = Recipe.all    
   end
 
   # GET /recipes/1
@@ -23,34 +17,31 @@ class RecipesController < ApplicationController
 
   # POST /recipes
   def create
-   
     @recipe = Recipe.new(recipe_params)
-    
+
     if @recipe.save
-      render :show, status: :created, location: @recipe
+      render json: @recipe, status: :created
     else
       render json: @recipe.errors, status: :unprocessable_entity
     end
-    
   end
 
   # PATCH/PUT /recipes/1
   def update
-
     if @recipe.update(recipe_params)    
-      render :show, status: :ok, location: @recipe
+      render json: @recipe, status: :ok
     else
       render json: @recipe.errors, status: :unprocessable_entity
     end
-
   end
 
   # DELETE /recipes/1
   def destroy
-    
-    @recipe.destroy      
-    head :no_content
-
+    if @recipe.destroy
+      render json: nil, status: :ok
+    else
+      render json: nil, status: :unprocessable_entity
+    end
   end
 
   private
@@ -62,7 +53,7 @@ class RecipesController < ApplicationController
 
   # Never trust parameters from the scary internet, only allow the white list through.
   def recipe_params
-    params.fetch(:recipe, {})
+    params.fetch(:recipe, {}).permit(:name, :sourceURL, directions: [], ingredients_attributes: [:amount, :amountUnit, :description])
   end
 
 end

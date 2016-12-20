@@ -24,11 +24,15 @@ ActiveRecord::Schema.define(version: 20161204134213) do
   end
 
   create_table "ingredients", id: :uuid, default: -> { "uuid_generate_v4()" }, force: :cascade do |t|
-    t.integer "recipe_id"
-    t.integer "ingredient_id"
-    t.decimal "amount"
-    t.string  "amountUnit"
-    t.string  "descriptionModifier"
+    t.uuid     "recipe_id"
+    t.uuid     "base_ingredient_id"
+    t.decimal  "amount"
+    t.string   "amountUnit"
+    t.string   "description"
+    t.datetime "created_at",         null: false
+    t.datetime "updated_at",         null: false
+    t.index ["base_ingredient_id"], name: "index_ingredients_on_base_ingredient_id", using: :btree
+    t.index ["recipe_id"], name: "index_ingredients_on_recipe_id", using: :btree
   end
 
   create_table "recipe_parses", id: :uuid, default: -> { "uuid_generate_v4()" }, force: :cascade do |t|
@@ -37,17 +41,22 @@ ActiveRecord::Schema.define(version: 20161204134213) do
     t.string   "imageURL"
     t.text     "ingredients"
     t.text     "directions"
-    t.integer  "recipe_id"
+    t.uuid     "recipe_id"
     t.datetime "created_at",  null: false
     t.datetime "updated_at",  null: false
+    t.index ["recipe_id"], name: "index_recipe_parses_on_recipe_id", using: :btree
   end
 
   create_table "recipes", id: :uuid, default: -> { "uuid_generate_v4()" }, force: :cascade do |t|
     t.string   "name"
     t.string   "sourceURL"
-    t.text     "instructions"
-    t.datetime "created_at",   null: false
-    t.datetime "updated_at",   null: false
+    t.string   "imageURL"
+    t.text     "directions"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
   end
 
+  add_foreign_key "ingredients", "base_ingredients"
+  add_foreign_key "ingredients", "recipes"
+  add_foreign_key "recipe_parses", "recipes"
 end

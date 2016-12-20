@@ -1,9 +1,11 @@
 class CreateRecipesAndIngredients < ActiveRecord::Migration[5.0]
+
   def change
     create_table :recipes, id: :uuid do |t|
-      t.string :name
+      t.string :name      
       t.string :sourceURL
-      t.text   :instructions
+      t.string :imageURL
+      t.text   :directions
 
       t.timestamps
     end
@@ -16,14 +18,16 @@ class CreateRecipesAndIngredients < ActiveRecord::Migration[5.0]
     end
 
     create_table :ingredients, id: :uuid do |t|
-      t.integer :recipe_id
-      t.integer :ingredient_id
+      # Foreign Keys
+      t.references :recipe, type: :uuid, index: true, foreign_key: true
+      t.references :base_ingredient, type: :uuid, index: true, foreign_key: true
 
       t.decimal :amount
       t.string  :amountUnit
+      t.string  :description
 
-      t.string  :descriptionModifier
+      t.timestamps
     end
-
   end
+
 end
