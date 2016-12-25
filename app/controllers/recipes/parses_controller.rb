@@ -5,38 +5,34 @@ class Recipes::ParsesController < ApplicationController
 
   before_action :set_recipe_parse, only: [:show]
 
-  def show    
-    
-    if @recipe_parse.present?        
+  def show
+    if @recipe_parse.present?
       render json: @recipe_parse.to_json, status: :ok
-    else        
+    else
       render json: nil, status: :not_found
     end
-    
   end
 
-  def create    
-
+  def create
     # TODO: Run this in a background task?
-
     @recipe_parse = Recipes::Parse.new(recipe_parse_params)
-
     recipeParser = RecipeParser.new
     recipeParser.loadHTMLFromURL(@recipe_parse.url)
-
     @recipe_parse.name = recipeParser.findName
     @recipe_parse.imageURL = recipeParser.findThumbnailImageURL
-    @recipe_parse.ingredients = recipeParser.findIngredients
-    @recipe_parse.directions = recipeParser.findDirections
+    recipeParser.findIngredients.each do |ingredientText|
+      ingredientParser = IngredientParser.new(ingredientText)
+      @recipe_parse.ingredients.append(ingredientParser.ingredientComponents)
+    end
 
+    @recipe_parse.directions = recipeParser.findDirections
     if @recipe_parse.save
       render json: @recipe_parse.to_json, status: :created
     else
       render json: @recipe_parse.errors, status: :unprocessable_entity
     end
-    
   end
-  
+
   private
 
   def set_recipe_parse
@@ -44,7 +40,7 @@ class Recipes::ParsesController < ApplicationController
   end
 
   # Never trust parameters from the scary internet, only allow the white list through.
-  def recipe_parse_params    
+  def recipe_parse_params
     params.fetch(:parse, {}).permit(:url)
   end
 

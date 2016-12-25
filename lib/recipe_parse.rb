@@ -2,9 +2,11 @@ module RecipeParse
   # Used to parse ingredients from third party URLs
 
   require 'nokogiri'
-  require 'open-uri'  
+  require 'open-uri'
 
   class RecipeParser
+
+    # TODO: include site-speific css tags to search for (i.e. for allrecipes.com)
 
     def recipeParsedRaw
       unless @doc.present?
@@ -19,9 +21,9 @@ module RecipeParse
     # returns true if successful
     # returns false if unsuccessful
     def loadHTMLFromURL(url)
-      begin 
+      begin
         @doc = Nokogiri::HTML(open(url))
-        @url = url   
+        @url = url
       rescue
         Rails.logger.info "RecipeParser.loadURL: unable to load URL #{url}"
         return false
@@ -34,8 +36,8 @@ module RecipeParse
     # returns true if successful
     # returns false if unsuccessful
     def loadHTMLFromFile(filePath)
-      begin 
-        @doc = File.open(filePath) { |f| Nokogiri::HTML(f) } 
+      begin
+        @doc = File.open(filePath) { |f| Nokogiri::HTML(f) }
       rescue
         Rails.logger.info "RecipeParser.loadURL: unable to load HTML file #{filePath}"
         return false
@@ -86,7 +88,7 @@ module RecipeParse
         end
 
         if ingredientsListHTML.present?
-          Rails.logger.info "RecipeParser.findIngredients: found ingredients list HTML as #{ingredientsListHTML.name}"          
+          Rails.logger.info "RecipeParser.findIngredients: found ingredients list HTML as #{ingredientsListHTML.name}"
           ingredientsListParsed = parseListHTML(ingredientsListHTML)
           Rails.logger.info "RecipeParser.findIngredients: found ingredients #{ingredientsListParsed}"
           return ingredientsListParsed
@@ -94,8 +96,8 @@ module RecipeParse
           Rails.logger.info "RecipeParser.findIngredients: unable to find ingredients list HTML"
           return nil
         end
-        
-      end      
+
+      end
     end
 
     # returns an array of directions as string
@@ -113,7 +115,7 @@ module RecipeParse
           return nil
         end
 
-        if directionsListHTML.present?          
+        if directionsListHTML.present?
           Rails.logger.info "RecipeParser.findDirections: found directions HTML as #{directionsListHTML.name}"
           directionsListParsed = parseListHTML(directionsListHTML)
           Rails.logger.info "RecipeParser.findDirections: found directions #{directionsListParsed}"
@@ -158,11 +160,11 @@ module RecipeParse
     def findHeaderContainingText(textOptionsArray)
       @doc.css('h2', 'h3', 'h4', 'h5', 'h6', 'dt').each do |header|
         textOptionsArray.each do |text|
-          if header.content.downcase.include? text     
+          if header.content.downcase.include? text
             Rails.logger.info "RecipeParser.findIngredients: found ingredients #{header.name} header titled \"#{header.content.squish}\""
             return header
-          end        
-        end             
+          end
+        end
       end
       return nil
     end
@@ -171,9 +173,9 @@ module RecipeParse
 
       if node != nil
         Rails.logger.info "RecipeParser.findListAfterHTMLNode: searching for list in #{node.name}"
-        
+
         nodeIsListNode = (%w(ol ul).include? node.name)
-        if nodeIsListNode          
+        if nodeIsListNode
           Rails.logger.info "RecipeParser.findListAfterHTMLNode: found list node #{node.name}"
           return node
         end
@@ -190,12 +192,12 @@ module RecipeParse
           Rails.logger.info "RecipeParser.findListAfterHTMLNode: no list in #{node.name}, searching children"
           node.children.each do |childNode|
             listNodeAsChild = findListAfterHTMLNode(childNode)
-            if listNodeAsChild != nil                            
+            if listNodeAsChild != nil
               return listNodeAsChild
             end
           end
-        end        
-        
+        end
+
         listNodeCouldBeNextSibling = (node.next != nil)
         if listNodeCouldBeNextSibling
           Rails.logger.info "RecipeParser.findListAfterHTMLNode: no list in #{node.name}, searching next node"
@@ -203,7 +205,7 @@ module RecipeParse
           if listNodeAsNextSibling != nil
             return listNodeAsNextSibling
           end
-        end                
+        end
       end
 
       return nil
@@ -212,18 +214,18 @@ module RecipeParse
     def parseListHTML(listHTML)
       parsedList = []
 
-      listHTML.children.each do |listItem|    
+      listHTML.children.each do |listItem|
           nodeContent = listItem.content
           if nodeContent.present?
             Rails.logger.info "RecipeParser.parseListHTML: found content in #{listItem.name}"
             nodeContentCleaned = nodeContent.squish
             contentJustEmptySpace = nodeContentCleaned.length < 2
             parsedList.append(nodeContentCleaned) unless contentJustEmptySpace
-          else            
+          else
             listItem.children.each do |childNode|
               parsedList = parsedList.concat(parseListHTML(childNode))
             end
-          end        
+          end
       end
 
       return parsedList

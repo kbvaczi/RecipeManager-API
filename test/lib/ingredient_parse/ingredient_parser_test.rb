@@ -23,7 +23,7 @@
 
       ingredientsList.each do |ingredientString|
         ingredientParser = IngredientParser.new(ingredientString)
-        puts "Parsed Ingredient: #{ingredientParser.ingredientAmount} #{ingredientParser.ingredientAmountUnit} #{ingredientParser.ingredientName}"
+        Rails.logger.info "Parsed Ingredient: #{ingredientParser.ingredientAmount} #{ingredientParser.ingredientAmountUnit} #{ingredientParser.ingredientName}"
         assert_not_nil ingredientParser.ingredientAmount
         assert_not_nil ingredientParser.ingredientAmountUnit
         assert_not_nil ingredientParser.ingredientName

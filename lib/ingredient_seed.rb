@@ -4,6 +4,10 @@ module IngredientSeed
   require 'nokogiri'
   require 'open-uri'
 
+  def recipeHTMLFiles
+    testHTMLFilesArray = Dir.glob("lib/ingredient_seed/recipe_html_files/**/*")
+  end
+
   class IngredientSeeder
     
     attr_accessor :urlsParsed, :urlsToBeParsed, :doc
@@ -26,13 +30,13 @@ module IngredientSeed
           @doc = Nokogiri::HTML(open(url))
           @currentUrl = url          
         rescue
-          Rails.logger.info "IngredientParser.loadURL: unable to load URL #{url}"
+          Rails.logger.info "IngredientSeeder.loadHTMLFromURL: unable to load URL #{url}"
           return false
         end
-        Rails.logger.info "IngredientParser.loadURL: loaded URL #{url}"
+        Rails.logger.info "IngredientSeeder.loadHTMLFromURL: loaded URL #{url}"
         return true
       else
-        Rails.logger.info "IngredientParser.loadURL: already parsed URL #{url}"
+        Rails.logger.info "IngredientSeeder.loadHTMLFromURL: already parsed URL #{url}"
         return false
       end
     end
@@ -41,23 +45,27 @@ module IngredientSeed
       begin 
         @doc = File.open(filePath) { |f| Nokogiri::HTML(f) } 
       rescue
-        Rails.logger.info "RecipeParser.loadURL: unable to load HTML file #{filePath}"
+        Rails.logger.info "IngredientSeeder.loadHTMLFromFile: unable to load HTML file #{filePath}"
         return false
       end
-      Rails.logger.info "RecipeParser.loadURL: successfully loaded HTML file #{filePath}"
+      Rails.logger.info "IngredientSeeder.loadHTMLFromFile: successfully loaded HTML file #{filePath}"
       return true
     end
 
     def findOtherBettyCrockerRecipesLinkedOnPage
       otherRecipes = []
       @doc.css('a[href]').each do |urlNode|
-        relativeURL = urlNode['href']
-        if isBettyCrockerRecipeURL(relativeURL)
-          absoluteURL = "http://www.bettycrocker.com" + relativeURL
+        url = urlNode['href']
+        if isBettyCrockerRecipeURL(url)
+          isAbsoluteURL = url.include?("http")
+          absoluteURL = (isAbsoluteURL ? url : "http://www.bettycrocker.com" + url)
           otherRecipes.append(absoluteURL)
         end
       end
-      @urlsToBeParsed.concat(otherRecipes)
+      otherRecipes.each do |recipeURL|
+        @urlsToBeParsed.append(recipeURL) unless @urlsParsed.include?(recipeURL)
+      end
+      
       return otherRecipes
     end
 
@@ -80,16 +88,29 @@ module IngredientSeed
       if @currentUrl.present?        
         if isBettyCrockerRecipeURL(@currentUrl)
           findIngredientsOnPage.each do |ingredient|
+            # Create ingredient Node
             ingredientNode = @ingredientsParsedLog.create_element('BaseIngredient')
-            nameNode = @ingredientsParsedLog.create_element('Name', ingredient[:name])
-            ingredientNode.add_child(nameNode)
-            categoryNode = @ingredientsParsedLog.create_element('Category', ingredient[:category])
-            ingredientNode.add_child(categoryNode)
-            if @ingredientsParsedLog.at("BaseIngredient Name:contains(\"#{ingredient[:name]}\")")
-              puts "Ingredient #{ingredient[:name]} already captured"
+            ingredientNode.set_attribute('name', ingredient[:name])            
+            
+            existingBaseIngredientNode = @ingredientsParsedLog.at("//BaseIngredient[@name=\"#{ingredient[:name]}\"]")
+            if existingBaseIngredientNode != nil
+              Rails.logger.info "Ingredient #{ingredient[:name].gsub("\"","")} already captured"
             else
-              @ingredientsParsedLog.at('BaseIngredients').add_child(ingredientNode)
-              puts "Ingredient #{ingredient[:name]} added"
+              existingCategoryNode = @ingredientsParsedLog.at("//Category[@name=\'#{ingredient[:category]}\']")
+              if existingCategoryNode == nil
+                newCategoryNode = @ingredientsParsedLog.create_element('Category')
+                newCategoryNode.set_attribute('name', ingredient[:category])
+                existingCategoriesSection = @ingredientsParsedLog.at("//Categories")
+                if existingCategoriesSection == nil                  
+                  newCategoriesSection = @ingredientsParsedLog.create_element('Categories')
+                  @ingredientsParsedLog.add_child(newCategoriesSection)                  
+                end
+                categoriesSection = @ingredientsParsedLog.at("//Categories")
+                categoriesSection.add_child(newCategoryNode)
+              end              
+              categoryNode = @ingredientsParsedLog.at("//Category[@name=\'#{ingredient[:category]}\']")
+              categoryNode.add_child(ingredientNode)        
+              Rails.logger.info "+ Ingredient #{ingredient[:name]} added"
             end
           end
         end      
@@ -116,7 +137,7 @@ module IngredientSeed
     end
 
     def cleanString(string)
-      return string.gsub(/\(.+\)/,"").gsub(/\/.+/,"").squish
+      return string.gsub(/\(.+\)/,"").gsub(/\/.+/,"").gsub("\"","").squish rescue nil
     end
 
     ## Ingredients Log ##
@@ -133,6 +154,6 @@ module IngredientSeed
       File.write(@ingredientsParsedLogFilePath, @ingredientsParsedLog.to_xml(indent: 4, indent_text: " "))
     end
 
-  end
+  end # IngredientSeeder Class
 
-end
+end # IngredientSeed Module

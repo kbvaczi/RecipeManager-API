@@ -2,38 +2,28 @@ module IngredientParse
 
   class IngredientParser
 
-    # TODO: include site-speific css tags to search for (i.e. for allrecipes.com)
-
-    def initialize(ingredientStringRaw)
-      @ingredientStringRaw = ingredientStringRaw
-      @ingredientStringCleaned = cleanedIngredientStringFrom(ingredientStringRaw)
+    def initialize(ingredientTextRaw)
+      @ingredientText = ingredientTextRaw.squish
+      @ingredientTextCleaned = cleanedStringFrom(@ingredientText)
       @ingredientName = nil
       @ingredientAmountUnit = nil
       @ingredientAmountUnitAlias = nil
       @ingredientAmount = nil
     end
 
-    #TODO make these private
-
-    def ingredientAmountUnitAlias
-      unless @ingredientAmountUnitAlias == nil
-        return @ingredientAmountUnitAlias
-      end
-      
-      @ingredientAmountUnitAlias = unitAliasInString(@ingredientStringCleaned)
-      return @ingredientAmountUnitAlias
+    def ingredientComponents
+      return {description: @ingredientText, name: ingredientName, amount: ingredientAmount,
+              amountUnit: ingredientAmountUnit}
     end
 
     def ingredientAmountUnit
       unless @ingredientAmountUnit == nil
         return @ingredientAmountUnit
       end
-
       if ingredientAmountUnitAlias == nil
         @ingredientAmountUnit = "count"
         return "count"
       end
-
       @ingredientAmountUnit = unitAliasedAs(ingredientAmountUnitAlias)
       return @ingredientAmountUnit
     end
@@ -42,22 +32,18 @@ module IngredientParse
       unless @ingredientAmount == nil
         return @ingredientAmount
       end
-
       # TODO handle all patterns
       # Possible Patterns:
       # Vanilla: "3 cups"
       # Fraction: "1 1/2 cups"
       # Compound units: "3 lbs 2 ounces"
       # Multipliers: "2 12oz cans" or "2x 12oz cans"
-      
-      amountString = ingredientStringSplit[:amountString]
-      
+      amountString = ingredientStringComponents[:amountString]
       if amountString != nil
         @ingredientAmount = amountRepresentedByString(amountString)
       else
         @ingredientAmount = 1
       end
-      
       return @ingredientAmount
     end
 
@@ -65,34 +51,38 @@ module IngredientParse
       unless @ingredientName == nil
         return @ingredientName
       end
-
-      @ingredientName = ingredientStringSplit[:nameString].squish
+      @ingredientName = ingredientStringComponents[:nameString]
       return @ingredientName
     end
 
     private
 
-    def ingredientStringSplit
-      unless @ingredientStringSplit == nil
-        return @ingredientStringSplit 
+    def ingredientAmountUnitAlias
+      unless @ingredientAmountUnitAlias == nil
+        return @ingredientAmountUnitAlias
       end
-      
-      @ingredientStringSplit = {amountString: nil, nameString: nil}
+      @ingredientAmountUnitAlias = unitAliasInString(@ingredientTextCleaned)
+      return @ingredientAmountUnitAlias
+    end
 
+    def ingredientStringComponents
+      unless @ingredientStringComponents == nil
+        return @ingredientStringComponents
+      end
+      @ingredientStringComponents = {amountString: nil, nameString: nil}
       if ingredientAmountUnitAlias != nil
-        ingredientSplitString = @ingredientStringCleaned.split(ingredientAmountUnitAlias)
-        @ingredientStringSplit = {amountString: ingredientSplitString[0], nameString: ingredientSplitString.last}
+        ingredientStringSplitByUnitAlias = @ingredientTextCleaned.split(ingredientAmountUnitAlias)
+        @ingredientStringComponents = {amountString: ingredientStringSplitByUnitAlias[0].squish, nameString: ingredientStringSplitByUnitAlias.last.squish}
       else
-        amountString = amountStringFrom(@ingredientStringCleaned)
+        amountString = amountStringFrom(@ingredientTextCleaned)
         if amountString != nil
-          nameString = @ingredientStringCleaned.gsub(amountString, "")
+          nameString = @ingredientTextCleaned.gsub(amountString, "").squish
         else
-          nameString = @ingredientStringCleaned
-        end        
-        @ingredientStringSplit = {amountString: amountString, nameString: nameString}
+          nameString = @ingredientTextCleaned
+        end
+        @ingredientStringComponents = {amountString: amountString, nameString: nameString}
       end
-
-      return @ingredientStringSplit
+      return @ingredientStringComponents
     end
 
     def unitAliasInString(string)
@@ -115,70 +105,83 @@ module IngredientParse
       return nil
     end
 
+    def amountWithFractionRegex
+      return /(\d+x?\s+)?(\d+[\s\W]\d+\s?\/\s?\d+)/
+    end
+
+    def amountWithoutFractionRegex
+      return /(\d+x?\s+)?(\d+)/
+    end
+
     def amountStringFrom(string)
-      matchData = string.match(/(\d+[x]?\s+)*(\d+[\s|\W]?\d*\/?\d*)/i)
-      if matchData != nil 
-        return matchData[0]
+      matchDataWithFraction = string.match(amountWithFractionRegex)
+      return matchDataWithFraction[0] if matchDataWithFraction
+      matchDataWithoutFraction = string.match(amountWithoutFractionRegex)
+      return matchDataWithoutFraction[0] if matchDataWithoutFraction
+      return nil
+    end
+
+    def amountRepresentedByString(string)
+      amountString = "1"
+      multiplierString = "1"
+      amountWithFractionMatch = string.match(amountWithFractionRegex)
+      if amountWithFractionMatch
+        amountString = amountWithFractionMatch[2]
+        multiplierString = amountWithFractionMatch[1] if amountWithFractionMatch[1]
       else
-        return nil
+        amountWithoutFractionMatch = string.match(amountWithoutFractionRegex)
+        if amountWithoutFractionMatch
+          amountString = amountWithoutFractionMatch[2]
+          multiplierString = amountWithoutFractionMatch[1] if amountWithoutFractionMatch[1]
+        end
       end
+      totalAmountAsUnit = Unit.new(amountString) * Unit.new(multiplierString) rescue 1
+      totalAmount = totalAmountAsUnit.to_r
+      return totalAmount
     end
 
-    def amountRepresentedByString(amountString)
-      matchData = amountString.match(/(\d+[x]?\s+)*(\d+[\s|\W]?\d*\/?\d*)/i)
-      unless matchData == nil
-        mulitplier = matchData[1]||1 rescue 1
-        amount = matchData[2]||1 rescue 1
-        totalAmountUnit = Unit.new(amount) * Unit.new(mulitplier)
-        totalAmount = totalAmountUnit.to_r
-        return totalAmount
-      end
-      return 1
-    end
-
-    def cleanedIngredientStringFrom(rawString)
-      unless rawString != nil
+    def cleanedStringFrom(rawString)
+      if rawString == nil
         return ""
       end
-
-      cleanedIngredientString = replaceProblemCharacters(rawString) # convert vulgar fractions to readable fractions
-      cleanedIngredientString.gsub!(/\(.+\)/,"") # get rid of anything in parenthesis
-      return cleanedIngredientString
+      cleanedString = replaceProblemCharactersFrom(rawString) # convert vulgar fractions to readable fractions
+      cleanedString.gsub!(/\(.+\)/,"") # get rid of anything in parenthesis (typically instructional)
+      cleanedString.gsub!(/,.+/,"") # get rid of anything after a comma (typically instructional)
+      cleanedString.squish! # Remove whitespace potentially introduced
+      return cleanedString
     end
 
-    def replaceProblemCharacters(string)
+    def replaceProblemCharactersFrom(string)
       replacedString = string
       problemCharacters.each {|f| replacedString.gsub!(f[0], f[1])}
       return replacedString.downcase
     end
 
-    def problemCharacters 
+    def problemCharacters
       return {
         # Vulgar Fraction Characters
-        "\u00BC" => " 1/4",
-        "\u00BD" => " 1/2",
-        "\u00BE" => " 3/4",
-        "\u2150" => " 1/7",
-        "\u2151" => " 1/9",
-        "\u2152" => " 1/10",
-        "\u2153" => " 1/3",
-        "\u2154" => " 2/3",
-        "\u2155" => " 1/5",
-        "\u2156" => " 2/5",
-        "\u2157" => " 3/5",
-        "\u2158" => " 4/5",
-        "\u2159" => " 1/6",
-        "\u215A" => " 5/6",
-        "\u215B" => " 1/8",
-        "\u215C" => " 3/8",
-        "\u215D" => " 5/8",
-        "\u215E" => " 7/8",
+        "\u00BC" => " 1/4 ",
+        "\u00BD" => " 1/2 ",
+        "\u00BE" => " 3/4 ",
+        "\u2150" => " 1/7 ",
+        "\u2151" => " 1/9 ",
+        "\u2152" => " 1/10 ",
+        "\u2153" => " 1/3 ",
+        "\u2154" => " 2/3 ",
+        "\u2155" => " 1/5 ",
+        "\u2156" => " 2/5 ",
+        "\u2157" => " 3/5 ",
+        "\u2158" => " 4/5 ",
+        "\u2159" => " 1/6 ",
+        "\u215A" => " 5/6 ",
+        "\u215B" => " 1/8 ",
+        "\u215C" => " 3/8 ",
+        "\u215D" => " 5/8 ",
+        "\u215E" => " 7/8 ",
         # Other Problem Characters
         "⁄" => "/", # weird pseudo slash
       }
     end
-
-
 
   end
 
