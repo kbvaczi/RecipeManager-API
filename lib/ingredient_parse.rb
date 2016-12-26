@@ -4,7 +4,7 @@ module IngredientParse
 
     def initialize(ingredientTextRaw)
       @ingredientText = ingredientTextRaw.squish
-      @ingredientTextCleaned = cleanedStringFrom(@ingredientText)
+      @ingredientTextCleaned = cleanIngredientTextFrom(@ingredientText)
       @ingredientName = nil
       @ingredientAmountUnit = nil
       @ingredientAmountUnitAlias = nil
@@ -55,7 +55,7 @@ module IngredientParse
       return @ingredientName
     end
 
-    private
+    #private
 
     def ingredientAmountUnitAlias
       unless @ingredientAmountUnitAlias == nil
@@ -72,7 +72,7 @@ module IngredientParse
       @ingredientStringComponents = {amountString: nil, nameString: nil}
       if ingredientAmountUnitAlias != nil
         ingredientStringSplitByUnitAlias = @ingredientTextCleaned.split(ingredientAmountUnitAlias)
-        @ingredientStringComponents = {amountString: ingredientStringSplitByUnitAlias[0].squish, nameString: ingredientStringSplitByUnitAlias.last.squish}
+        @ingredientStringComponents = {amountString: ingredientStringSplitByUnitAlias[0].squish, nameString: cleanIngredientNameFrom(ingredientStringSplitByUnitAlias.last)}
       else
         amountString = amountStringFrom(@ingredientTextCleaned)
         if amountString != nil
@@ -106,11 +106,11 @@ module IngredientParse
     end
 
     def amountWithFractionRegex
-      return /(\d+x?\s+)?(\d+[\s\W]\d+\s?\/\s?\d+)/
+      return /(?:(\d+)\s?[x|count]?\s+)?(\d+[\s\W]\d+\s?\/\s?\d+)/i
     end
 
     def amountWithoutFractionRegex
-      return /(\d+x?\s+)?(\d+)/
+      return /(?:(\d+)\s?[x|count]?\s+)?(\d+)/i
     end
 
     def amountStringFrom(string)
@@ -140,24 +140,33 @@ module IngredientParse
       return totalAmount
     end
 
-    def cleanedStringFrom(rawString)
+    def cleanIngredientNameFrom(rawName)
+      cleanedName = rawName
+      cleanedName.gsub!(/\A\s*of\s*/i, "") # remove leading of i.e. 3 cups of bacon
+      cleanedName.gsub!(/\A\W+/, "") # remove leading non-word characters
+      cleanedName.squish! # Remove whitespace potentially introduced
+      return cleanedName
+    end
+
+    def cleanIngredientTextFrom(rawString)
       if rawString == nil
         return ""
       end
       cleanedString = replaceProblemCharactersFrom(rawString) # convert vulgar fractions to readable fractions
       cleanedString.gsub!(/\(.+\)/,"") # get rid of anything in parenthesis (typically instructional)
       cleanedString.gsub!(/,.+/,"") # get rid of anything after a comma (typically instructional)
+      cleanedString.downcase # downcase string
       cleanedString.squish! # Remove whitespace potentially introduced
       return cleanedString
     end
 
     def replaceProblemCharactersFrom(string)
       replacedString = string
-      problemCharacters.each {|f| replacedString.gsub!(f[0], f[1])}
-      return replacedString.downcase
+      problemCharacterReplacementRules.each {|f| replacedString.gsub!(f[0], f[1])}
+      return replacedString
     end
 
-    def problemCharacters
+    def problemCharacterReplacementRules
       return {
         # Vulgar Fraction Characters
         "\u00BC" => " 1/4 ",
@@ -178,6 +187,17 @@ module IngredientParse
         "\u215C" => " 3/8 ",
         "\u215D" => " 5/8 ",
         "\u215E" => " 7/8 ",
+        # Spelled-out numbers
+        /one/i => "1",
+        /two/i => "2",
+        /three/i => "3",
+        /four/i => "4",
+        /five/i => "5",
+        /six/i => "6",
+        /seven/i => "7",
+        /eight/i => "8",
+        /nine/i => "9",
+        /ten/i => "10",
         # Other Problem Characters
         "⁄" => "/", # weird pseudo slash
       }
