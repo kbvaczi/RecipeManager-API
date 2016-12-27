@@ -1,9 +1,10 @@
-class Recipes::ParsesController < ApplicationController
+class RecipeParsesController < ApplicationController
 
-  include RecipeParse
-  include IngredientParse
+  include RecipeParseMethods
+  include IngredientParseMethods
 
   before_action :set_recipe_parse, only: [:show]
+  before_action :authenticate_user!
 
   def show
     if @recipe_parse.present?
@@ -15,7 +16,8 @@ class Recipes::ParsesController < ApplicationController
 
   def create
     # TODO: Run this in a background task?
-    @recipe_parse = Recipes::Parse.new(recipe_parse_params)
+    @recipe_parse = RecipeParse.new(recipe_parse_params)
+    @recipe_parse.user = current_user
     recipeParser = RecipeParser.new
     recipeParser.loadHTMLFromURL(@recipe_parse.url)
     @recipe_parse.name = recipeParser.findName
@@ -36,12 +38,12 @@ class Recipes::ParsesController < ApplicationController
   private
 
   def set_recipe_parse
-    @recipe_parse = Recipes::Parse.find(params[:id])
+    @recipe_parse = current_user.recipe_parses.find(params[:id])
   end
 
   # Never trust parameters from the scary internet, only allow the white list through.
   def recipe_parse_params
-    params.fetch(:parse, {}).permit(:url)
+    params.fetch(:recipe_parse, {}).permit(:url)
   end
 
 end

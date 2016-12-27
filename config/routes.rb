@@ -1,10 +1,8 @@
 Rails.application.routes.draw do
-  
-  # For details on the DSL available within this file, see http://guides.rubyonrails.org/routing.html  
-  
-  namespace :recipes do
-    resources :parses, only: [:create, :show]
-  end
+
+  mount_devise_token_auth_for 'User', at: 'auth'
+
+  resources :recipe_parses, only: [:create, :show]
   resources :recipes
-  
+
 end

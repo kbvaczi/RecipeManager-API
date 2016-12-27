@@ -1,17 +1,18 @@
 class RecipesController < ApplicationController
-  
+
   before_action :set_recipe, only: [:show, :update, :destroy]
+  before_action :authenticate_user!
 
   # GET /recipes
   def index
     @recipes = Recipe.all
     # TODO: Pagination?
-    render json @recipes, :status :ok
+    render json: @recipes, status: :ok
   end
 
   # GET /recipes/1
   def show
-    render json: @recipe, :status :ok
+    render json: @recipe, status: :ok
   end
 
   # POST /recipes
@@ -27,7 +28,7 @@ class RecipesController < ApplicationController
 
   # PATCH/PUT /recipes/1
   def update
-    if @recipe.update(recipe_params)    
+    if @recipe.update(recipe_params)
       render json: @recipe, status: :ok
     else
       render json: @recipe.errors, status: :unprocessable_entity

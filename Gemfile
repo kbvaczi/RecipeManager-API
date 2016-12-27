@@ -23,6 +23,10 @@ gem 'puma', '~> 3.0'
 # Unit conversions
 gem 'ruby-units', '~> 2.0', '>= 2.0.1'
 
+# User Authentication
+gem 'devise_token_auth', '~> 0.1.39'
+gem 'omniauth', '~> 1.3', '>= 1.3.1'
+
 group :development, :test do
   # Call 'byebug' anywhere in the code to stop execution and get a debugger console
   gem 'byebug', platform: :mri

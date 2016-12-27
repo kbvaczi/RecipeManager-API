@@ -27,7 +27,8 @@ module RecipeManagerApi
     # Skip views, helpers and assets when generating a new resource.
     config.api_only = true
 
-    config.autoload_paths += %W(#{config.root}/lib) # load files under the /lib directory
+    config.autoload_paths += Dir[Rails.root.join('app', 'models', '{*/}')] # search subdirectories for model info
+    config.autoload_paths += Dir[Rails.root.join('lib')] # load files under the /lib directory
 
     # automatically setup new table migrations to use UUID instead of integer for database table primary keys
     config.generators do |g|

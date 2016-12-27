@@ -1,6 +1,6 @@
 class RecipeParserTest < ActiveSupport::TestCase
 
-  include RecipeParse
+  include RecipeParseMethods
 
   def recipeURLS
     ["http://www.skinnytaste.com/dinas-tossed-mushrooms/",

@@ -2,7 +2,7 @@ class CreateRecipesAndIngredients < ActiveRecord::Migration[5.0]
 
   def change
     create_table :recipes, id: :uuid do |t|
-      t.string :name      
+      t.string :name
       t.string :sourceURL
       t.string :imageURL
       t.text   :directions
@@ -20,7 +20,8 @@ class CreateRecipesAndIngredients < ActiveRecord::Migration[5.0]
     create_table :ingredients, id: :uuid do |t|
       # Foreign Keys
       t.references :recipe, type: :uuid, index: true, foreign_key: true
-      t.references :base_ingredient, type: :uuid, index: true, foreign_key: true
+      t.
+      t.references :base_ingredient, type: :uuid, index: true
 
       t.decimal :amount
       t.string  :amountUnit

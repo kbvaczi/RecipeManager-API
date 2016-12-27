@@ -1,4 +1,4 @@
-module RecipeParse
+module RecipeParseMethods
   # Used to parse ingredients from third party URLs
 
   require 'nokogiri'

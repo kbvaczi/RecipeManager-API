@@ -31,12 +31,20 @@ Rails.application.configure do
 
   config.action_mailer.perform_caching = false
 
+  # Use Mailcatcher gem to send/receive mails in development environment
+  # gem install mailcatcher (do not put in gemfile)
+  # Type mailcatcher in terminal to run service
+  # go to http://localhost:1080 to check mail
+  # send mail through smtp://localhost:1025
+  config.action_mailer.default_url_options = { :host => 'http://localhost:3000' }
+  config.action_mailer.delivery_method = :smtp
+  config.action_mailer.smtp_settings = { :address => 'localhost', :port => 1025 }
+
   # Print deprecation notices to the Rails logger.
   config.active_support.deprecation = :log
 
   # Raise an error on page load if there are pending migrations.
   config.active_record.migration_error = :page_load
-
 
   # Raises error for missing translations
   # config.action_view.raise_on_missing_translations = true

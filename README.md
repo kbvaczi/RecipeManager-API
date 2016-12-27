@@ -10,6 +10,9 @@ Things you may want to cover:
 * System dependencies
 
 * Configuration
+  Development:
+  Postgres test/development databases
+  Mailcatcher for development mail server
 
 * Database creation
 

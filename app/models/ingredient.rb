@@ -1,6 +1,6 @@
 class Ingredient < ApplicationRecord
   # Relationships
-  belongs_to :recipe, optional: true # optional must be true to allow nested attributes for recipe model
+  belongs_to :recipe, optional: true, dependent: destroy # optional must be true to allow nested attributes for recipe model
   belongs_to :base_ingredient, optional: true
 
   attr_accessor :name
@@ -13,5 +13,5 @@ class Ingredient < ApplicationRecord
     # TODO: implement linking to base ingredient after ingredient creation
     # TODO: Run this in a background task?
   end
-  
+
 end
