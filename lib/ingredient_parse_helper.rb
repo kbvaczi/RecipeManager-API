@@ -105,14 +105,6 @@ module IngredientParseHelper
       return nil
     end
 
-    def amountWithFractionRegex
-      return /((?<multiplier>\d+)\s?(x|count)?\s?)?(?=((?<whole>\d+)[\s\W]?(?<fraction>\d+\s?\/\s?\d+)))/i
-    end
-
-    def amountWithoutFractionRegex
-      return /(?:(\d+)\s?[x|count]?\s+)?(\d+)/i
-    end
-
     def amountStringFrom(string)
       amountStringRegex = /\d*\s?(?:x|count)?\s?\d+[\s\W]?\d*\s?\/?\s?\d*/i
       amountStringMatch = string.match(amountStringRegex)
