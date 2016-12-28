@@ -1,7 +1,7 @@
 class RecipeParsesController < ApplicationController
 
-  include RecipeParseMethods
-  include IngredientParseMethods
+  include RecipeParseHelper
+  include IngredientParseHelper
 
   before_action :set_recipe_parse, only: [:show]
   before_action :authenticate_user!

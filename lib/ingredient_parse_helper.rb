@@ -1,4 +1,4 @@
-module IngredientParseMethods
+module IngredientParseHelper
 
   class IngredientParser
 
