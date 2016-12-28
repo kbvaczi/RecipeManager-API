@@ -1,7 +1,8 @@
-  class IngredientParserTest < ActiveSupport::TestCase
+class IngredientParserTest < ActiveSupport::TestCase
 
   include IngredientParseMethods
   include RecipeParseMethods
+
 
   def recipeURLS
     ["http://www.bettycrocker.com/recipes/smothered-chicken-casserole/a68b963a-5f75-4ad4-be09-8e0004ee0d9e"]
