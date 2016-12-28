@@ -106,7 +106,7 @@ module IngredientParseHelper
     end
 
     def amountWithFractionRegex
-      return /(?:(\d+)\s?[x|count]?\s+)?(\d+[\s\W]\d+\s?\/\s?\d+)/i
+      return /((?<multiplier>\d+)\s?(x|count)?\s?)?(?=((?<whole>\d+)[\s\W]?(?<fraction>\d+\s?\/\s?\d+)))/i
     end
 
     def amountWithoutFractionRegex
@@ -114,26 +114,23 @@ module IngredientParseHelper
     end
 
     def amountStringFrom(string)
-      matchDataWithFraction = string.match(amountWithFractionRegex)
-      return matchDataWithFraction[0] if matchDataWithFraction
-      matchDataWithoutFraction = string.match(amountWithoutFractionRegex)
-      return matchDataWithoutFraction[0] if matchDataWithoutFraction
-      return nil
+      amountStringRegex = /\d*\s?(?:x|count)?\s?\d+[\s\W]?\d*\s?\/?\s?\d*/i
+      amountStringMatch = string.match(amountStringRegex)
+      if amountStringMatch
+        return amountStringMatch[0]
+      else
+        return nil
+      end
     end
 
     def amountRepresentedByString(string)
       amountString = "1"
       multiplierString = "1"
-      amountWithFractionMatch = string.match(amountWithFractionRegex)
-      if amountWithFractionMatch
-        amountString = amountWithFractionMatch[2]
-        multiplierString = amountWithFractionMatch[1] if amountWithFractionMatch[1]
-      else
-        amountWithoutFractionMatch = string.match(amountWithoutFractionRegex)
-        if amountWithoutFractionMatch
-          amountString = amountWithoutFractionMatch[2]
-          multiplierString = amountWithoutFractionMatch[1] if amountWithoutFractionMatch[1]
-        end
+      amountStringCaptureRegex = /((?<multiplier>\d+)\s?(x|count)?\s?)?(?=((?<whole>\d+)([\s\W](?<fraction>\d+\s?\/\s?\d+)))|((?<!\d(\s|\W))(?<fraction>\d+\s?\/\s?\d+))|((?<whole>\d+)(?!\s?\/\s?)))/i
+      amountStringMatch = string.match(amountStringCaptureRegex)
+      if amountStringMatch
+        amountString = (amountStringMatch['whole'] || "") + " " + (amountStringMatch['fraction'] || "")
+        multiplierString = (amountStringMatch['multiplier'] || "1")
       end
       totalAmountAsUnit = Unit.new(amountString) * Unit.new(multiplierString) rescue 1
       totalAmount = totalAmountAsUnit.to_r

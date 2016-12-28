@@ -44,7 +44,15 @@ class IngredientParserTest < ActiveSupport::TestCase
     assert i.ingredientAmountUnit == "tablespoon"
   end
 
-  test "fraction ingredient: \"5 1/2 pounds of stuff\"" do
+  test "fraction ingredient: \"1/2 cup all-purpose flour\"" do
+    i = IngredientParser.new("1/2 cup all-purpose flour")
+    Rails.logger.info "Parsed Ingredient -  Amount:#{i.ingredientAmount} Unit:#{i.ingredientAmountUnit} Name:#{i.ingredientName}"
+    assert i.ingredientName == "all-purpose flour"
+    assert i.ingredientAmount == 0.5.to_r
+    assert i.ingredientAmountUnit == "cup"
+  end
+
+  test "fraction ingredient with whole number: \"5 1/2 pounds of stuff\"" do
     i = IngredientParser.new("5 1/2 pounds of stuff")
     Rails.logger.info "Parsed Ingredient -  Amount:#{i.ingredientAmount} Unit:#{i.ingredientAmountUnit} Name:#{i.ingredientName}"
     assert i.ingredientName == "stuff"
