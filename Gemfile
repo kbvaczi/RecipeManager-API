@@ -7,15 +7,11 @@ gem 'rails', '~> 5.0.0', '>= 5.0.0.1'
 gem 'pg'
 # Use Puma as the app server
 gem 'puma', '~> 3.0'
+
 # Build JSON APIs with ease. Read more: https://github.com/rails/jbuilder
 # gem 'jbuilder', '~> 2.5'
 # Use Redis adapter to run Action Cable in production
 # gem 'redis', '~> 3.0'
-# Use ActiveModel has_secure_password
-# gem 'bcrypt', '~> 3.1.7'
-
-# Use Capistrano for deployment
-# gem 'capistrano-rails', group: :development
 
 # Use Rack CORS for handling Cross-Origin Resource Sharing (CORS), making cross-origin AJAX possible
 # gem 'rack-cors'
@@ -27,12 +23,9 @@ gem 'ruby-units', '~> 2.0', '>= 2.0.1'
 gem 'devise_token_auth', '~> 0.1.39'
 gem 'omniauth', '~> 1.3', '>= 1.3.1'
 
-group :production do
-  # Adds ability to timeout requests using middleware. Recommended by heroku setup with puma webserver:
-  # https://devcenter.heroku.com/articles/deploying-rails-applications-with-the-puma-web-server
-  gem 'rack-timeout', '~> 0.4.2'
-
-end
+# Adds ability to timeout requests using middleware. Recommended by heroku setup with puma webserver:
+# https://devcenter.heroku.com/articles/deploying-rails-applications-with-the-puma-web-server
+gem 'rack-timeout', '~> 0.4.2'
 
 group :development, :test do
   # Call 'byebug' anywhere in the code to stop execution and get a debugger console
