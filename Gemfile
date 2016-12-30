@@ -27,6 +27,13 @@ gem 'ruby-units', '~> 2.0', '>= 2.0.1'
 gem 'devise_token_auth', '~> 0.1.39'
 gem 'omniauth', '~> 1.3', '>= 1.3.1'
 
+group :production do
+  # Adds ability to timeout requests using middleware. Recommended by heroku setup with puma webserver:
+  # https://devcenter.heroku.com/articles/deploying-rails-applications-with-the-puma-web-server
+  gem 'rack-timeout', '~> 0.4.2'
+
+end
+
 group :development, :test do
   # Call 'byebug' anywhere in the code to stop execution and get a debugger console
   gem 'byebug', platform: :mri
