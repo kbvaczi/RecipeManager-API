@@ -4,16 +4,23 @@ module IngredientParseHelper
 
     def initialize(ingredientTextRaw)
       @ingredientText = ingredientTextRaw.squish
-      @ingredientTextCleaned = cleanIngredientTextFrom(@ingredientText)
+      @ingredientTextSanitized = sanitizeTextFrom(@ingredientText.dup)
+      @ingredientDescription = nil
       @ingredientName = nil
       @ingredientAmountUnit = nil
       @ingredientAmountUnitAlias = nil
       @ingredientAmount = nil
     end
 
+    def ingredientText
+      return @ingredientText
+    end
+
     def ingredientComponents
-      return {description: @ingredientText, name: ingredientName, amount: ingredientAmount,
-              amountUnit: ingredientAmountUnit}
+      return {  description: ingredientDescription,
+                name: ingredientName,
+                amount: ingredientAmount,
+                amountUnit: ingredientAmountUnit }
     end
 
     def ingredientAmountUnit
@@ -51,8 +58,16 @@ module IngredientParseHelper
       unless @ingredientName == nil
         return @ingredientName
       end
-      @ingredientName = ingredientStringComponents[:nameString]
+      @ingredientName = ingredientStringComponents[:name]
       return @ingredientName
+    end
+
+    def ingredientDescription
+      unless @ingredientDescription == nil
+        return @ingredientDescription
+      end
+      @ingredientDescription = ingredientStringComponents[:description]
+      return @ingredientDescription
     end
 
     #private
@@ -61,7 +76,7 @@ module IngredientParseHelper
       unless @ingredientAmountUnitAlias == nil
         return @ingredientAmountUnitAlias
       end
-      @ingredientAmountUnitAlias = unitAliasInString(@ingredientTextCleaned)
+      @ingredientAmountUnitAlias = unitAliasInString(@ingredientTextSanitized)
       return @ingredientAmountUnitAlias
     end
 
@@ -69,18 +84,28 @@ module IngredientParseHelper
       unless @ingredientStringComponents == nil
         return @ingredientStringComponents
       end
-      @ingredientStringComponents = {amountString: nil, nameString: nil}
+      @ingredientStringComponents = { amountString: nil, name: nil, description: nil }
       if ingredientAmountUnitAlias != nil
-        ingredientStringSplitByUnitAlias = @ingredientTextCleaned.split(ingredientAmountUnitAlias)
-        @ingredientStringComponents = {amountString: ingredientStringSplitByUnitAlias[0].squish, nameString: cleanIngredientNameFrom(ingredientStringSplitByUnitAlias.last)}
+        sanitizedIngredientStringSplitByUnitAlias = @ingredientTextSanitized.split(ingredientAmountUnitAlias)
+        rawIngredientStringSplitByUnitAlias = @ingredientText.split(ingredientAmountUnitAlias)
+        descriptionRawSplit = rawIngredientStringSplitByUnitAlias[1..rawIngredientStringSplitByUnitAlias.length-1]
+        descriptionRaw = descriptionRawSplit.join(ingredientAmountUnitAlias)
+        @ingredientStringComponents =
+          { amountString: sanitizedIngredientStringSplitByUnitAlias[0].squish,
+            name: removeUnwantedLeadingCharactersFrom(sanitizedIngredientStringSplitByUnitAlias.last),
+            description: removeUnwantedLeadingCharactersFrom(descriptionRaw) }
       else
-        amountString = amountStringFrom(@ingredientTextCleaned)
+        amountString = amountStringFrom(@ingredientTextSanitized)
         if amountString != nil
-          nameString = @ingredientTextCleaned.gsub(amountString, "").squish
+          nameString = @ingredientTextSanitized.gsub(amountString, "").squish
+          description = @ingredientText.gsub(amountString, "").squish
         else
-          nameString = @ingredientTextCleaned
+          nameString = @ingredientTextSanitized
+          description = @ingredientText
         end
-        @ingredientStringComponents = {amountString: amountString, nameString: nameString}
+        @ingredientStringComponents = { amountString: amountString,
+                                        name: nameString,
+                                        description: description }
       end
       return @ingredientStringComponents
     end
@@ -98,15 +123,15 @@ module IngredientParseHelper
     def unitAliasedAs(aliasString)
       Unit.definitions.each do |unit|
         if unit[1].aliases.include?(aliasString)
-          unit = unit[1].name.match(/\w+\s*-*\w+/)[0]
-          return unit
+          unitName = unit[1].name.match(/\w+\s*-*\w+/)[0]
+          return unitName
         end
       end
       return nil
     end
 
     def amountStringFrom(string)
-      amountStringRegex = /\d*\s?(?:x|count)?\s?\d+[\s\W]?\d*\s?\/?\s?\d*/i
+      amountStringRegex = /\d*\s?(?:x|count|item)?(?:\(?s\)?)?\s?\d+[\s\W]?\d*\s?\/?\s?\d*/i
       amountStringMatch = string.match(amountStringRegex)
       if amountStringMatch
         return amountStringMatch[0]
@@ -129,19 +154,20 @@ module IngredientParseHelper
       return totalAmount
     end
 
-    def cleanIngredientNameFrom(rawName)
-      cleanedName = rawName
-      cleanedName.gsub!(/\A\s*of\s*/i, "") # remove leading of i.e. 3 cups of bacon
-      cleanedName.gsub!(/\A\W+/, "") # remove leading non-word characters
-      cleanedName.squish! # Remove whitespace potentially introduced
-      return cleanedName
+    def removeUnwantedLeadingCharactersFrom(rawString)
+      cleanedString = rawString.dup
+      cleanedString.gsub!(/\A\s*of\s*/i, "") # remove leading "of" i.e. 3 cups of bacon
+      cleanedString.gsub!(/\A\W+/, "") # remove leading non-word characters
+      cleanedString.squish! # Remove whitespace potentially introduced
+      return cleanedString
     end
 
-    def cleanIngredientTextFrom(rawString)
+    def sanitizeTextFrom(rawString)
       if rawString == nil
         return ""
       end
-      cleanedString = replaceProblemCharactersFrom(rawString) # convert vulgar fractions to readable fractions
+      cleanedString = rawString.dup
+      cleanedString = replaceProblemCharactersFrom(cleanedString) # convert vulgar fractions to readable fractions
       cleanedString.gsub!(/\(.+\)/,"") # get rid of anything in parenthesis (typically instructional)
       cleanedString.gsub!(/,.+/,"") # get rid of anything after a comma (typically instructional)
       cleanedString.downcase # downcase string
@@ -150,7 +176,7 @@ module IngredientParseHelper
     end
 
     def replaceProblemCharactersFrom(string)
-      replacedString = string
+      replacedString = string.dup
       problemCharacterReplacementRules.each {|f| replacedString.gsub!(f[0], f[1])}
       return replacedString
     end

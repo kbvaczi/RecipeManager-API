@@ -5,7 +5,7 @@ class User < ActiveRecord::Base
           :confirmable, :omniauthable
   include DeviseTokenAuth::Concerns::User
 
-  has_many :recipes
-  has_many :recipe_parses
+  has_many :recipes, dependent: :destroy
+  has_many :recipe_parses, dependent: :destroy
 
 end

@@ -1,13 +1,13 @@
 class RecipesController < ApplicationController
 
   before_action :set_recipe, only: [:show, :update, :destroy]
-  before_action :authenticate_user!
+  # before_action :authenticate_user!
 
   # GET /recipes
   def index
-    @recipes = Recipe.all
+    @recipes = Recipe.all.includes(:ingredients)
     # TODO: Pagination?
-    render json: @recipes, status: :ok
+    render json: @recipes.to_json(include: :ingredients), status: :ok
   end
 
   # GET /recipes/1
@@ -53,7 +53,7 @@ class RecipesController < ApplicationController
 
   # Never trust parameters from the scary internet, only allow the white list through.
   def recipe_params
-    params.fetch(:recipe, {}).permit(:name, :sourceURL, :recipe_parse_id, directions: [], ingredients_attributes: [:amount, :amountUnit, :description])
+    params.fetch(:recipe, {}).permit(:name, :sourceURL, :imageURL, :recipe_parse_id, directions: [], ingredients_attributes: [:amount, :amountUnit, :description])
   end
 
 end
