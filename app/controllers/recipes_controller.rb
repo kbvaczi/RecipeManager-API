@@ -12,7 +12,7 @@ class RecipesController < ApplicationController
 
   # GET /recipes/1
   def show
-    render json: @recipe, status: :ok
+    render json: @recipe.to_json(include: :ingredients), status: :ok
   end
 
   # POST /recipes
@@ -20,7 +20,7 @@ class RecipesController < ApplicationController
     @recipe = Recipe.new(recipe_params)
 
     if @recipe.save
-      render json: @recipe, status: :created
+      render json: @recipe.to_json(include: :ingredients), status: :created
     else
       render json: @recipe.errors, status: :unprocessable_entity
     end
@@ -28,8 +28,8 @@ class RecipesController < ApplicationController
 
   # PATCH/PUT /recipes/1
   def update
-    if @recipe.update(recipe_params)
-      render json: @recipe, status: :ok
+    if @recipe.update_attributes(recipe_params)
+      render json: @recipe.to_json(include: :ingredients), status: :ok
     else
       render json: @recipe.errors, status: :unprocessable_entity
     end
@@ -48,12 +48,12 @@ class RecipesController < ApplicationController
 
   # Use callbacks to share common setup or constraints between actions.
   def set_recipe
-    @recipe = Recipe.find(params[:id])
+    @recipe = Recipe.where(id: params[:id]).includes(:ingredients).first
   end
 
   # Never trust parameters from the scary internet, only allow the white list through.
   def recipe_params
-    params.fetch(:recipe, {}).permit(:name, :sourceURL, :imageURL, :recipe_parse_id, directions: [], ingredients_attributes: [:amount, :amountUnit, :description])
+    params.fetch(:recipe, {}).permit(:name, :sourceURL, :imageURL, :recipe_parse_id, directions: [], ingredients_attributes: [:id, :amount, :amountUnit, :description, :_destroy])
   end
 
 end
