@@ -4,7 +4,7 @@ class RecipeParsesController < ApplicationController
   include IngredientParseHelper
 
   before_action :set_recipe_parse, only: [:show]
-  before_action :authenticate_user!
+  #before_action :authenticate_user!
 
   def show
     if @recipe_parse.present?
