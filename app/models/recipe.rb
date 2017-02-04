@@ -11,7 +11,7 @@ class Recipe < ApplicationRecord
   serialize :directions, Array
 
   # Validations
-  validates_presence_of :name, :ingredients
+  validates_presence_of :name
 
   # Callbacks
   before_create :assign_recipe_parse
