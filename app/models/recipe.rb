@@ -4,7 +4,7 @@ class Recipe < ApplicationRecord
   has_many :ingredients, dependent: :destroy
   has_many :base_ingredients, through: :ingredients
   has_one  :recipe_parse, dependent: :destroy
-  accepts_nested_attributes_for :ingredients
+  accepts_nested_attributes_for :ingredients, allow_destroy: true
 
   # Fields
   attr_accessor :recipe_parse_id
