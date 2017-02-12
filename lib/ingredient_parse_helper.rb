@@ -150,7 +150,7 @@ module IngredientParseHelper
         multiplierString = (amountStringMatch['multiplier'] || "1")
       end
       totalAmountAsUnit = Unit.new(amountString) * Unit.new(multiplierString) rescue 1
-      totalAmount = totalAmountAsUnit.to_r
+      totalAmount = totalAmountAsUnit.to_f
       return totalAmount
     end
 

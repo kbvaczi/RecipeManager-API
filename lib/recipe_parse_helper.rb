@@ -78,7 +78,7 @@ module RecipeParseHelper
         return nil
       else
 
-        ingredientsHeaderHTML = findHeaderContainingText(["ingredients"])
+        ingredientsHeaderHTML = findIngredientsHeader()
 
         if ingredientsHeaderHTML.present?
           ingredientsListHTML = findListAfterHTMLNode(ingredientsHeaderHTML)
@@ -157,10 +157,32 @@ module RecipeParseHelper
 
     private
 
+    def findIngredientsHeader()
+      ingredientsHeader = nil
+      headerContentOptions = ["ingredients"]
+      headerAsHeader = findHeaderContainingText(headerContentOptions)
+      ingredientsHeader = headerAsHeader
+      if ingredientsHeader == nil
+        headerAsIngredientClass = @doc.at_css('.ingredients')
+        ingredientsHeader = headerAsIngredientClass
+      end
+      if ingredientsHeader == nil
+        @doc.css('div', 'dt', 'p').each do |bodyObject|
+          if bodyObject.content.downcase == "ingredients"
+            ingredientsHeader = bodyObject
+          end
+        end
+      end
+      if ingredientsHeader != nil
+        Rails.logger.info "RecipeParser.findIngredients: found ingredients #{ingredientsHeader.name} header titled \"#{ingredientsHeader.content.squish}\""
+      end
+      return ingredientsHeader
+    end
+
     def findHeaderContainingText(textOptionsArray)
       @doc.css('h2', 'h3', 'h4', 'h5', 'h6', 'dt').each do |header|
         textOptionsArray.each do |text|
-          if header.content.downcase.include? text
+          if header.content.downcase.include? text.downcase
             Rails.logger.info "RecipeParser.findIngredients: found ingredients #{header.name} header titled \"#{header.content.squish}\""
             return header
           end
