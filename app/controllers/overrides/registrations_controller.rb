@@ -3,10 +3,6 @@ module Overrides
 
     def create
       @resource            = resource_class.new(sign_up_params)
-      ## Overide: force provider to something other than "email" to bypass built-in email validations
-      @resource.provider   = "iOS"
-      ## Overide: manually set uid as it's not a whitelisted parameter
-      @resource.uid        = params[:uid]
 
       # honor devise configuration for case_insensitive_keys
       if resource_class.case_insensitive_keys.include?(:email)
@@ -37,7 +33,7 @@ module Overrides
         # override email confirmation, must be sent manually from ctrl
         resource_class.set_callback("create", :after, :send_on_create_confirmation_instructions)
         resource_class.skip_callback("create", :after, :send_on_create_confirmation_instructions)
-
+        puts @resource.attributes
         if @resource.save
           yield @resource if block_given?
 
@@ -58,7 +54,6 @@ module Overrides
               expiry: (Time.now + DeviseTokenAuth.token_lifespan).to_i
             }
 
-
             @resource.save!
 
             update_auth_header
@@ -72,6 +67,12 @@ module Overrides
         clean_up_passwords @resource
         render_create_error_email_already_exists
       end
+    end
+
+    def sign_up_params
+      #params.permit(*params_for_resource(:sign_up))
+      # Override: allow uid and provider as parameter
+      params.permit(*params_for_resource(:sign_up), :uid, :provider)
     end
 
   end
